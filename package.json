@@ -1,0 +1,8 @@
+{
+  "name": "grade-tracker-ui",
+  "version": "1.0.0",
+  "description": "Static frontend for Vercel deployment",
+  "scripts": {
+    "build": "echo \"Building static frontend\" && mkdir -p public && cp src/main/resources/static/index.html public/index.html"
+  }
+}
