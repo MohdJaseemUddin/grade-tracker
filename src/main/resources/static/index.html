@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Grade Tracker</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh;color:#1a202c}
+  .app{max-width:1200px;margin:0 auto;padding:20px}
+
+  /* Header */
+  .header{background:linear-gradient(135deg,#1a365d 0%,#2a69ac 100%);border-radius:16px;padding:24px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;color:#fff}
+  .header h1{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+  .header p{font-size:13px;opacity:.75;margin-top:4px}
+  .status-badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500}
+  .status-dot{display:inline-block;width:8px;height:8px;background:#68d391;border-radius:50%;margin-right:6px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+  /* Stats */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .stat-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .stat-card .label{font-size:12px;color:#718096;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+  .stat-card .value{font-size:28px;font-weight:700;color:#1a202c}
+  .stat-card .sub{font-size:12px;color:#a0aec0;margin-top:4px}
+  .stat-card.green .value{color:#276749}
+  .stat-card.blue .value{color:#2b6cb0}
+  .stat-card.orange .value{color:#c05621}
+  .stat-card.red .value{color:#9b2c2c}
+
+  /* Main layout */
+  .main-grid{display:grid;grid-template-columns:360px 1fr;gap:20px}
+
+  /* Panels */
+  .panel{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
+  .panel-header{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
+  .panel-header h2{font-size:15px;font-weight:600;color:#1a202c}
+  .panel-body{padding:16px 20px}
+
+  /* Form */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .form-group{margin-bottom:10px}
+  .form-group label{display:block;font-size:12px;font-weight:600;color:#4a5568;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+  .form-control{width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1a202c;transition:border-color .2s;background:#fff}
+  .form-control:focus{outline:none;border-color:#4299e1;box-shadow:0 0 0 3px rgba(66,153,225,.15)}
+  .btn{padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+  .btn-primary{background:#2b6cb0;color:#fff;width:100%;margin-top:4px}
+  .btn-primary:hover{background:#2c5282}
+  .btn-danger{background:#fff0f0;color:#c53030;border:1px solid #fed7d7;padding:5px 10px;font-size:12px}
+  .btn-danger:hover{background:#fed7d7}
+  .btn-sm{padding:5px 10px;font-size:12px}
+  .btn-success{background:#c6f6d5;color:#276749;border:1px solid #9ae6b4}
+  .btn-success:hover{background:#9ae6b4}
+
+  /* Search */
+  .search-wrap{position:relative;margin-bottom:12px}
+  .search-wrap input{padding-left:34px}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#a0aec0;font-size:15px}
+
+  /* Student list */
+  .student-list{display:flex;flex-direction:column;gap:8px;max-height:480px;overflow-y:auto;padding-right:2px}
+  .student-item{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;transition:all .15s}
+  .student-item:hover{border-color:#bee3f8;background:#ebf8ff}
+  .student-item.active{border-color:#4299e1;background:#ebf8ff;box-shadow:0 0 0 3px rgba(66,153,225,.15)}
+  .avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+  .student-name{font-size:14px;font-weight:600;color:#1a202c}
+  .student-meta{font-size:12px;color:#718096;margin-top:2px}
+  .grade-badge{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;flex-shrink:0}
+  .empty-state{text-align:center;padding:40px 20px;color:#a0aec0}
+  .empty-state .icon{font-size:40px;margin-bottom:10px}
+
+  /* Right panel tabs */
+  .tabs{display:flex;gap:2px;padding:16px 20px 0;background:#fff}
+  .tab{padding:8px 16px;border:none;background:none;font-size:13px;font-weight:500;color:#718096;cursor:pointer;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;font-family:inherit;transition:all .15s}
+  .tab.active{color:#2b6cb0;border-bottom-color:#4299e1;background:#ebf8ff}
+
+  /* Grade table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:10px 12px;background:#f7fafc;color:#4a5568;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e2e8f0}
+  td{padding:10px 12px;border-bottom:1px solid #edf2f7;color:#1a202c}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#f7fafc}
+
+  /* Grade add form */
+  .grade-form{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:16px;padding:14px;background:#f7fafc;border-radius:10px;border:1px solid #e2e8f0}
+
+  /* Analytics bars */
+  .bar-row{margin-bottom:14px}
+  .bar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;color:#4a5568}
+  .bar-bg{height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:5px;transition:width .6s ease}
+
+  /* No-student placeholder */
+  .select-prompt{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:350px;color:#a0aec0}
+  .select-prompt .big-icon{font-size:48px;margin-bottom:16px}
+
+  /* Alerts */
+  .alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px}
+  .alert-success{background:#c6f6d5;color:#276749;border:1px solid #9ae6b4}
+  .alert-error{background:#fff5f5;color:#9b2c2c;border:1px solid #fed7d7}
+
+  /* Topper card */
+  .topper-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #edf2f7}
+  .topper-row:last-child{border:none}
+  .rank{font-size:14px;font-weight:700;color:#a0aec0;width:24px}
+
+  @media(max-width:900px){.main-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:480px){.stats-grid{grid-template-columns:1fr 1fr}.grade-form{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+const API = '/api';
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || err.fieldErrors ? JSON.stringify(err.fieldErrors) : 'Error');
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+const COLORS = [
+  { bg:'#ebf8ff', fg:'#2b6cb0' }, { bg:'#f0fff4', fg:'#276749' },
+  { bg:'#fffff0', fg:'#975a16' }, { bg:'#fff5f5', fg:'#9b2c2c' },
+  { bg:'#faf5ff', fg:'#553c9a' }, { bg:'#e6fffa', fg:'#285e61' },
+];
+const colorFor = (id) => COLORS[id % COLORS.length];
+
+function gradeColor(g) {
+  if (g === 'A+' || g === 'A') return { bg:'#c6f6d5', fg:'#276749' };
+  if (g === 'B') return { bg:'#bee3f8', fg:'#2c5282' };
+  if (g === 'C') return { bg:'#fefcbf', fg:'#975a16' };
+  if (g === 'D') return { bg:'#fbd38d', fg:'#c05621' };
+  if (g === 'F') return { bg:'#fed7d7', fg:'#9b2c2c' };
+  return { bg:'#e2e8f0', fg:'#718096' };
+}
+
+// ── STATS BAR ────────────────────────────────────────────────────────
+function Stats({ students }) {
+  const withGrades = students.filter(s => s.grades?.length > 0);
+  const avg = withGrades.length
+    ? withGrades.reduce((sum, s) => sum + s.averagePercentage, 0) / withGrades.length
+    : 0;
+  const distinction = students.filter(s => s.averagePercentage >= 80).length;
+  const atRisk = students.filter(s => s.grades?.length > 0 && s.averagePercentage < 50).length;
+  return (
+    <div className="stats-grid">
+      <div className="stat-card blue">
+        <div className="label">Total Students</div>
+        <div className="value">{students.length}</div>
+        <div className="sub">enrolled</div>
+      </div>
+      <div className="stat-card green">
+        <div className="label">Class Average</div>
+        <div className="value">{avg.toFixed(1)}%</div>
+        <div className="sub">overall</div>
+      </div>
+      <div className="stat-card">
+        <div className="label">Distinction ≥80%</div>
+        <div className="value">{distinction}</div>
+        <div className="sub">{students.length ? Math.round(distinction/students.length*100) : 0}% of class</div>
+      </div>
+      <div className="stat-card red">
+        <div className="label">Needs Attention</div>
+        <div className="value">{atRisk}</div>
+        <div className="sub">below 50%</div>
+      </div>
+    </div>
+  );
+}
+
+// ── STUDENT FORM ─────────────────────────────────────────────────────
+function StudentForm({ onAdd }) {
+  const [form, setForm] = useState({ firstName:'', lastName:'', rollNumber:'', department:'', email:'' });
+  const [msg, setMsg] = useState(null);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.firstName || !form.lastName || !form.rollNumber) {
+      setMsg({ type:'error', text:'First name, last name and roll number are required.' });
+      return;
+    }
+    try {
+      await apiFetch('/students', { method:'POST', body: JSON.stringify(form) });
+      setMsg({ type:'success', text:`${form.firstName} ${form.lastName} added!` });
+      setForm({ firstName:'', lastName:'', rollNumber:'', department:'', email:'' });
+      onAdd();
+      setTimeout(() => setMsg(null), 3000);
+    } catch(e) {
+      setMsg({ type:'error', text: e.message });
+    }
+  };
+
+  return (
+    <div>
+      {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
+      <div className="form-row">
+        <div className="form-group">
+          <label>First Name *</label>
+          <input className="form-control" value={form.firstName} onChange={e=>set('firstName',e.target.value)} placeholder="e.g. Aarav"/>
+        </div>
+        <div className="form-group">
+          <label>Last Name *</label>
+          <input className="form-control" value={form.lastName} onChange={e=>set('lastName',e.target.value)} placeholder="e.g. Sharma"/>
+        </div>
+      </div>
+      <div className="form-row">
+        <div className="form-group">
+          <label>Roll Number *</label>
+          <input className="form-control" value={form.rollNumber} onChange={e=>set('rollNumber',e.target.value)} placeholder="e.g. CS001"/>
+        </div>
+        <div className="form-group">
+          <label>Department</label>
+          <select className="form-control" value={form.department} onChange={e=>set('department',e.target.value)}>
+            <option value="">Select dept.</option>
+            {['Computer Science','Mathematics','Physics','Electronics','Civil Engineering','Mechanical Eng.'].map(d=><option key={d}>{d}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="form-group">
+        <label>Email</label>
+        <input className="form-control" type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="e.g. aarav@college.edu"/>
+      </div>
+      <button className="btn btn-primary" onClick={submit}>+ Add Student</button>
+    </div>
+  );
+}
+
+// ── GRADES PANEL ─────────────────────────────────────────────────────
+function GradesPanel({ student, onRefresh }) {
+  const [grade, setGrade] = useState({ subject:'', marks:'', maxMarks:'100', semester:'', examType:'' });
+  const setG = (k,v) => setGrade(g=>({...g,[k]:v}));
+
+  const addGrade = async () => {
+    if (!grade.subject || !grade.marks) return;
+    try {
+      await apiFetch(`/students/${student.id}/grades`, {
+        method:'POST',
+        body: JSON.stringify({ ...grade, marks: parseInt(grade.marks), maxMarks: parseInt(grade.maxMarks)||100 })
+      });
+      setGrade({ subject:'', marks:'', maxMarks:'100', semester:'', examType:'' });
+      onRefresh();
+    } catch(e) { alert(e.message); }
+  };
+
+  const delGrade = async (gid) => {
+    if (!confirm('Delete this grade?')) return;
+    await apiFetch(`/grades/${gid}`, { method:'DELETE' });
+    onRefresh();
+  };
+
+  const c = colorFor(student.id);
+  const gc = gradeColor(student.overallGrade);
+
+  return (
+    <div>
+      {/* Student summary */}
+      <div style={{display:'flex',alignItems:'center',gap:14,padding:'0 0 16px',borderBottom:'1px solid #edf2f7',marginBottom:16}}>
+        <div className="avatar" style={{width:48,height:48,background:c.bg,color:c.fg,fontSize:18}}>
+          {student.firstName[0]}{student.lastName[0]}
+        </div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:16,fontWeight:700}}>{student.firstName} {student.lastName}</div>
+          <div style={{fontSize:12,color:'#718096'}}>{student.rollNumber} · {student.department} · {student.email}</div>
+        </div>
+        {student.grades?.length > 0 && (
+          <span className="grade-badge" style={{background:gc.bg,color:gc.fg,fontSize:15}}>
+            {student.overallGrade} · {student.averagePercentage?.toFixed(1)}%
+          </span>
+        )}
+      </div>
+
+      {/* Add grade form */}
+      <div className="grade-form">
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:'#4a5568',marginBottom:4}}>SUBJECT *</div>
+          <select className="form-control" value={grade.subject} onChange={e=>setG('subject',e.target.value)}>
+            <option value="">Select</option>
+            {['Mathematics','Physics','Chemistry','English','Computer Science','History','Statistics','Biology','Economics'].map(s=><option key={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:'#4a5568',marginBottom:4}}>MARKS *</div>
+          <input className="form-control" type="number" min="0" max="1000" value={grade.marks} onChange={e=>setG('marks',e.target.value)} placeholder="88"/>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:'#4a5568',marginBottom:4}}>OUT OF</div>
+          <input className="form-control" type="number" min="1" value={grade.maxMarks} onChange={e=>setG('maxMarks',e.target.value)}/>
+        </div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:'#4a5568',marginBottom:4}}>SEMESTER</div>
+          <input className="form-control" value={grade.semester} onChange={e=>setG('semester',e.target.value)} placeholder="Sem 1"/>
+        </div>
+        <button className="btn btn-success" style={{marginTop:0,whiteSpace:'nowrap'}} onClick={addGrade}>+ Add</button>
+      </div>
+
+      {/* Grades table */}
+      {student.grades?.length > 0 ? (
+        <div style={{overflowX:'auto'}}>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Marks</th>
+                <th>Max</th>
+                <th>%</th>
+                <th>Grade</th>
+                <th>Semester</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {student.grades.map(g => {
+                const pct = Math.round(g.marks / g.maxMarks * 1000) / 10;
+                const gc = gradeColor(g.letterGrade);
+                return (
+                  <tr key={g.id}>
+                    <td style={{fontWeight:500}}>{g.subject}</td>
+                    <td>{g.marks}</td>
+                    <td style={{color:'#a0aec0'}}>{g.maxMarks}</td>
+                    <td style={{fontWeight:600}}>{pct}%</td>
+                    <td><span className="grade-badge" style={{background:gc.bg,color:gc.fg}}>{g.letterGrade}</span></td>
+                    <td style={{color:'#718096'}}>{g.semester || '—'}</td>
+                    <td><button className="btn btn-danger" onClick={()=>delGrade(g.id)}>✕</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="empty-state" style={{padding:'30px 0'}}>
+          <div className="icon">📊</div>
+          <div>No grades yet. Add the first grade above.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ANALYTICS PANEL ──────────────────────────────────────────────────
+function AnalyticsPanel({ students }) {
+  const deptMap = {};
+  students.forEach(s => {
+    if (s.department && s.grades?.length) {
+      if (!deptMap[s.department]) deptMap[s.department] = [];
+      deptMap[s.department].push(s.averagePercentage);
+    }
+  });
+
+  const toppers = [...students]
+    .filter(s => s.grades?.length)
+    .sort((a,b) => b.averagePercentage - a.averagePercentage)
+    .slice(0, 5);
+
+  const distrib = [
+    { label:'A+ (≥90%)', count: students.filter(s=>s.averagePercentage>=90).length, color:'#276749' },
+    { label:'A  (80-89%)', count: students.filter(s=>{const a=s.averagePercentage;return a>=80&&a<90}).length, color:'#2b6cb0' },
+    { label:'B  (70-79%)', count: students.filter(s=>{const a=s.averagePercentage;return a>=70&&a<80}).length, color:'#553c9a' },
+    { label:'C  (60-69%)', count: students.filter(s=>{const a=s.averagePercentage;return a>=60&&a<70}).length, color:'#975a16' },
+    { label:'D  (50-59%)', count: students.filter(s=>{const a=s.averagePercentage;return a>=50&&a<60}).length, color:'#c05621' },
+    { label:'F  (<50%)',   count: students.filter(s=>s.grades?.length&&s.averagePercentage<50).length, color:'#9b2c2c' },
+  ];
+
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}}>
+      <div>
+        <div style={{fontWeight:600,marginBottom:14,fontSize:14}}>Department Averages</div>
+        {Object.keys(deptMap).length === 0 ? (
+          <div style={{color:'#a0aec0',fontSize:13}}>No department data yet.</div>
+        ) : Object.entries(deptMap).map(([dept, avgs]) => {
+          const avg = avgs.reduce((a,b)=>a+b,0)/avgs.length;
+          return (
+            <div className="bar-row" key={dept}>
+              <div className="bar-label"><span>{dept}</span><span style={{fontWeight:600}}>{avg.toFixed(1)}%</span></div>
+              <div className="bar-bg"><div className="bar-fill" style={{width:avg+'%',background:'#4299e1'}}/></div>
+            </div>
+          );
+        })}
+
+        <div style={{fontWeight:600,margin:'20px 0 14px',fontSize:14}}>Grade Distribution</div>
+        {distrib.map(d => (
+          <div className="bar-row" key={d.label}>
+            <div className="bar-label">
+              <span style={{fontFamily:'monospace'}}>{d.label}</span>
+              <span style={{fontWeight:600}}>{d.count} student{d.count!==1?'s':''}</span>
+            </div>
+            <div className="bar-bg">
+              <div className="bar-fill" style={{
+                width: students.length ? (d.count/students.length*100)+'%' : '0%',
+                background: d.color
+              }}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <div style={{fontWeight:600,marginBottom:14,fontSize:14}}>Top Performers</div>
+        {toppers.length === 0 ? (
+          <div style={{color:'#a0aec0',fontSize:13}}>No student data yet.</div>
+        ) : toppers.map((s, i) => {
+          const c = colorFor(s.id);
+          const gc = gradeColor(s.overallGrade);
+          return (
+            <div className="topper-row" key={s.id}>
+              <div className="rank">#{i+1}</div>
+              <div className="avatar" style={{width:34,height:34,background:c.bg,color:c.fg,fontSize:12}}>
+                {s.firstName[0]}{s.lastName[0]}
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:600,fontSize:13}}>{s.firstName} {s.lastName}</div>
+                <div style={{fontSize:11,color:'#718096'}}>{s.department}</div>
+              </div>
+              <span className="grade-badge" style={{background:gc.bg,color:gc.fg}}>
+                {s.averagePercentage?.toFixed(1)}%
+              </span>
+            </div>
+          );
+        })}
+
+        <div style={{marginTop:24,padding:16,background:'#f7fafc',borderRadius:10,border:'1px solid #e2e8f0'}}>
+          <div style={{fontWeight:600,fontSize:13,marginBottom:10}}>REST API Endpoints</div>
+          {[
+            ['GET',    '#68d391', '/api/students'],
+            ['POST',   '#90cdf4', '/api/students'],
+            ['PUT',    '#fbd38d', '/api/students/{id}'],
+            ['DELETE', '#fed7d7', '/api/students/{id}'],
+            ['POST',   '#90cdf4', '/api/students/{id}/grades'],
+            ['DELETE', '#fed7d7', '/api/grades/{gradeId}'],
+            ['GET',    '#68d391', '/api/analytics'],
+          ].map(([m,c,p]) => (
+            <div key={m+p} style={{display:'flex',gap:8,alignItems:'center',marginBottom:5}}>
+              <span style={{background:c,color:'#1a202c',padding:'2px 7px',borderRadius:4,fontSize:11,fontWeight:700,minWidth:52,textAlign:'center'}}>{m}</span>
+              <span style={{fontFamily:'monospace',fontSize:11,color:'#4a5568'}}>{p}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ─────────────────────────────────────────────────────────
+function App() {
+  const [students, setStudents] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [search, setSearch] = useState('');
+  const [tab, setTab] = useState('grades');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await apiFetch('/students');
+      setStudents(data);
+      // Refresh selected student too
+      if (selected) {
+        const fresh = data.find(s => s.id === selected.id);
+        if (fresh) setSelected(fresh);
+      }
+    } catch(e) {
+      console.error('Failed to load students', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [selected?.id]);
+
+  useEffect(() => { load(); }, []);
+
+  const deleteStudent = async (id) => {
+    if (!confirm('Delete this student and all their grades?')) return;
+    await apiFetch(`/students/${id}`, { method:'DELETE' });
+    if (selected?.id === id) setSelected(null);
+    load();
+  };
+
+  const filtered = students.filter(s =>
+    !search || `${s.firstName} ${s.lastName} ${s.rollNumber} ${s.department}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="app">
+      {/* Header */}
+      <div className="header">
+        <div>
+          <h1>🎓 Student Grade Tracker</h1>
+          <p>Spring Boot 3 · Spring Data JPA · H2 Database · React</p>
+        </div>
+        <div className="status-badge">
+          <span className="status-dot"/>Server Running · localhost:8080
+        </div>
+      </div>
+
+      {/* Stats */}
+      <Stats students={students}/>
+
+      {/* Main */}
+      <div className="main-grid">
+        {/* LEFT — Student list */}
+        <div>
+          <div className="panel">
+            <div className="panel-header">
+              <h2>Students ({students.length})</h2>
+            </div>
+            <div className="panel-body">
+              <StudentForm onAdd={load}/>
+              <div style={{height:1,background:'#edf2f7',margin:'14px 0'}}/>
+              <div className="search-wrap">
+                <span className="search-icon">🔍</span>
+                <input className="form-control" style={{paddingLeft:34}} placeholder="Search students..."
+                  value={search} onChange={e=>setSearch(e.target.value)}/>
+              </div>
+
+              {loading ? (
+                <div className="empty-state"><div>Loading...</div></div>
+              ) : (
+                <div className="student-list">
+                  {filtered.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="icon">👤</div>
+                      <div>{search ? 'No results found' : 'No students yet. Add one above!'}</div>
+                    </div>
+                  ) : filtered.map(s => {
+                    const c = colorFor(s.id);
+                    const gc = gradeColor(s.overallGrade);
+                    return (
+                      <div key={s.id} className={`student-item ${selected?.id===s.id?'active':''}`}
+                           onClick={()=>setSelected(s)}>
+                        <div className="avatar" style={{background:c.bg,color:c.fg}}>
+                          {s.firstName[0]}{s.lastName[0]}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div className="student-name">{s.firstName} {s.lastName}</div>
+                          <div className="student-meta">{s.rollNumber} · {s.department || 'No dept.'}</div>
+                        </div>
+                        {s.grades?.length > 0
+                          ? <span className="grade-badge" style={{background:gc.bg,color:gc.fg}}>{s.overallGrade}</span>
+                          : <span className="grade-badge" style={{background:'#edf2f7',color:'#a0aec0'}}>—</span>
+                        }
+                        <button className="btn btn-danger btn-sm" onClick={e=>{e.stopPropagation();deleteStudent(s.id)}}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT — Detail panel */}
+        <div className="panel">
+          {selected ? (
+            <>
+              <div className="tabs">
+                {['grades','analytics'].map(t => (
+                  <button key={t} className={`tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+                    {t === 'grades' ? '📋 Grades' : '📊 Analytics'}
+                  </button>
+                ))}
+              </div>
+              <div className="panel-body" style={{paddingTop:20}}>
+                {tab === 'grades'
+                  ? <GradesPanel student={selected} onRefresh={load}/>
+                  : <AnalyticsPanel students={students}/>
+                }
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="tabs">
+                <button className="tab active">📊 Analytics</button>
+              </div>
+              <div className="panel-body" style={{paddingTop:20}}>
+                {students.length > 0
+                  ? <AnalyticsPanel students={students}/>
+                  : (
+                    <div className="select-prompt">
+                      <div className="big-icon">👈</div>
+                      <div style={{fontWeight:600,fontSize:15,marginBottom:6}}>Select a student</div>
+                      <div style={{fontSize:13}}>Click any student on the left to view and manage their grades</div>
+                    </div>
+                  )
+                }
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
